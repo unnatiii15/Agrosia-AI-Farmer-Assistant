@@ -1,0 +1,9 @@
+pandas
+numpy
+scikit-learn
+sentence-transformers
+deep-translator
+langdetect
+fastapi
+uvicorn
+ollama

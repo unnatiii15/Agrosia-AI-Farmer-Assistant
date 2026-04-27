@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>🌾 Agrosia AI Assistant</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #dff5e1, #eef2f7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* MAIN CARD */
+.container {
+    width: 420px;
+    height: 650px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* HEADER */
+.header {
+    padding: 15px;
+    background: #4caf50;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    font-size: 18px;
+}
+
+/* CHAT AREA */
+.chat {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+/* BUBBLES */
+.message {
+    margin: 8px 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    max-width: 75%;
+    line-height: 1.4;
+}
+
+.user {
+    background: #4caf50;
+    color: white;
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.bot {
+    background: #f1f1f1;
+    color: black;
+    align-self: flex-start;
+}
+
+/* INPUT AREA */
+.controls {
+    padding: 10px;
+    border-top: 1px solid #eee;
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+/* BUTTONS */
+.buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+button {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 8px;
+    background: #4caf50;
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+button:hover {
+    background: #388e3c;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="header">🌾 Agrosia AI Assistant</div>
+
+<div class="chat" id="chat"></div>
+
+<div class="controls">
+
+<select id="lang">
+<option value="en-IN">English</option>
+<option value="hi-IN">Hindi</option>
+<option value="gu-IN">Gujarati</option>
+<option value="mr-IN">Marathi</option>
+</select>
+
+<input id="textInput" placeholder="Ask your farming question...">
+
+<div class="buttons">
+<button onclick="sendText()">Ask</button>
+<button onclick="startMic()">🎤 Speak</button>
+<button onclick="stopMic()">⛔ Stop Mic</button>
+<button onclick="speakAnswer()">🔊 Speak</button>
+<button onclick="stopSpeech()">⛔ Stop Voice</button>
+</div>
+
+</div>
+
+</div>
+
+<script>
+let currentAnswer = "";
+
+// 🎤 Speech recognition
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+// Add message bubble
+function addMessage(text, type){
+    let msg = document.createElement("div");
+    msg.className = "message " + type;
+    msg.innerText = text;
+    document.getElementById("chat").appendChild(msg);
+    document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
+}
+
+// Send text
+function sendText(){
+    let text = document.getElementById("textInput").value;
+    if(!text) return;
+    addMessage(text, "user");
+    send(text);
+    document.getElementById("textInput").value = "";
+}
+
+// Backend call
+async function send(text){
+    addMessage("Thinking...", "bot");
+
+    let res = await fetch("http://127.0.0.1:8000/chat",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({message:text})
+    });
+
+    let data = await res.json();
+    currentAnswer = data.reply;
+
+    // remove "Thinking..."
+    let chat = document.getElementById("chat");
+    chat.removeChild(chat.lastChild);
+
+    addMessage(currentAnswer, "bot");
+}
+
+// 🎤 mic
+function startMic(){
+    recognition.lang = document.getElementById("lang").value;
+    recognition.start();
+}
+
+function stopMic(){
+    recognition.stop();
+}
+
+recognition.onresult = function(e){
+    let text = e.results[0][0].transcript;
+    addMessage(text, "user");
+    send(text);
+};
+
+// 🔊 speak answer
+function speakAnswer(){
+    if(!currentAnswer) return;
+
+    let speech = new SpeechSynthesisUtterance(currentAnswer);
+    let voices = speechSynthesis.getVoices();
+
+    let lang = document.getElementById("lang").value;
+    let voice = voices.find(v => v.lang === lang);
+
+    if(!voice){
+        voice = voices.find(v => v.lang.includes("en"));
+    }
+
+    speech.voice = voice;
+    speech.lang = voice.lang;
+    speech.rate = 0.95;
+
+    speechSynthesis.speak(speech);
+}
+
+// ⛔ stop voice
+function stopSpeech(){
+    speechSynthesis.cancel();
+}
+</script>
+
+</body>
+</html>
