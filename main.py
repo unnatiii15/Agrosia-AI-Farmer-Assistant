@@ -7,19 +7,13 @@ from deep_translator import GoogleTranslator
 from langdetect import detect
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-
-# =========================
-# CONFIG
-# =========================
+#Config
 CSV_PATH = "dataset.csv"
 FAQ_FILE = "freq_faq.txt"
 OLLAMA_MODEL = "phi3"
 
 SUPPORTED_LANGS = ["en", "hi", "mr", "gu"]
-
-# =========================
-# LOAD DATA
-# =========================
+#Load Data
 df = pd.read_csv(CSV_PATH)
 df.columns = [c.strip() for c in df.columns]
 
@@ -27,10 +21,7 @@ df["Crop"] = df["Crop"].astype(str).str.lower().str.strip()
 df["Fertilizer"] = df["Fertilizer"].astype(str).str.lower().str.strip()
 
 ALL_CROPS = df["Crop"].unique().tolist()
-
-# =========================
-# FAQ
-# =========================
+#FAQ
 def load_faq(path):
     faqs = []
     try:
@@ -52,10 +43,7 @@ faq_a = [a for _, a in faqs]
 print("Loading model...")
 model = SentenceTransformer("all-MiniLM-L6-v2")
 faq_emb = model.encode(faq_q)
-
-# =========================
-# LANGUAGE
-# =========================
+#Language
 def detect_lang(text):
     try:
         lang = detect(text)
@@ -70,16 +58,10 @@ def translate(text, src, tgt):
         return GoogleTranslator(source=src, target=tgt).translate(text)
     except:
         return text
-
-# =========================
-# CLEAN
-# =========================
+#Clean
 def clean_text(text):
     return re.sub(r"\s+", " ", text).strip()
-
-# =========================
-# NORMALIZE
-# =========================
+#Normalize
 CROP_MAP = {
     "gehu": "wheat",
     "gehun": "wheat",
@@ -92,10 +74,7 @@ CROP_MAP = {
 
 def normalize_query(q):
     return " ".join([CROP_MAP.get(w, w) for w in q.lower().split()])
-
-# =========================
-# INTENT
-# =========================
+#Intent
 def detect_intent(q):
     if any(w in q for w in ["fertilizer","खत","ખાતર"]):
         return "fertilizer"
@@ -110,10 +89,7 @@ def detect_intent(q):
         return "irrigation"
 
     return "general"
-
-# =========================
-# DATASET
-# =========================
+#Dataset
 def search_dataset(q):
     for crop in ALL_CROPS:
         if crop in q:
@@ -122,10 +98,7 @@ def search_dataset(q):
                 ferts = ", ".join(res["Fertilizer"].unique())
                 return f"For {crop}, use {ferts}. Follow soil test."
     return None
-
-# =========================
-# FAQ
-# =========================
+#FAQ
 def search_faq(q):
     emb = model.encode([q])
     scores = cosine_similarity(emb, faq_emb)[0]
@@ -134,10 +107,7 @@ def search_faq(q):
     if scores[idx] > 0.5:
         return faq_a[idx]
     return None
-
-# =========================
-# LLM
-# =========================
+#LLM
 def ask_llm(q):
     prompt = f"""
 You are helping farmers.
@@ -160,10 +130,7 @@ Answer:
         return ans if ans.endswith(".") else ans + "."
     except:
         return "Please consult your local agriculture officer."
-
-# =========================
-# MAIN CHATBOT
-# =========================
+#Main Chatbot
 def chatbot(user_input):
 
     if len(user_input.strip()) < 3:
@@ -173,8 +140,6 @@ def chatbot(user_input):
     en = normalize_query(translate(user_input, lang, "en"))
 
     intent = detect_intent(en)
-
-    # 🔥 FIXED IMPORTANT CASES
 
     # Yellow leaves
     if "yellow" in en:
